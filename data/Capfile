@@ -1,0 +1,65 @@
+###
+# Capfile to upload Ale's NS5 H3K4me3 ChIPseq data
+# to an (eu-west-1) EBS volume and snapshot it.
+
+require 'catpaws'
+
+set :aws_access_key,  ENV['AMAZON_ACCESS_KEY']
+set :aws_secret_access_key , ENV['AMAZON_SECRET_ACCESS_KEY']
+set :ec2_url, ENV['EC2_URL']
+set :ebs_zone, ENV['EBS_AVAILABILITY_ZONE']
+set :ssh_options, { :user => "ubuntu", :keys=>[ENV['EC2_KEYFILE']]}
+set :nhosts, 1
+set :key, ENV['EC2_KEY']
+set :key_file, ENV['EC2_KEYFILE']
+set :ami, 'ami-cf4d67bb'  #EC2 eu-west-1 
+set :instance_type, 'm1.small'
+set :group_name, 'ns5_h3k4me3_chipseq_data'
+set :dev, '/dev/sdf'
+set :mount_point, '/data'
+
+set :ebs_size, 10
+set :ebs_zone, 'eu-west-1a' 
+
+vol_id = `cat VOLUMEID`.chomp
+set :vol_id, vol_id 
+
+#before getting to here, you should run
+#cap EC2:start
+#cap EBS:create
+#cap EBS:attach
+#cap EBS:format_xfs
+#cap EBS:mount_xfs
+
+set :input, 'CMN038.export.txt'
+set :ip, 'CMN039.export.txt'
+
+desc "Compress data"
+task :compress, :roles => proc{fetch :master} do
+  `tar -cvzf data.tgz *.export.txt`
+end 
+
+
+desc "Upload each dataset one to the new EBS volume"
+task :upload_data, :roles => proc{fetch :group_name} do
+  upload("data.tgz", "#{mount_point}/data.tgz")
+end
+before 'upload_data', 'EC2:start'
+
+
+desc "Unpack each dataset one to the new EBS volume"
+task :unpack_data, :roles => proc{fetch :group_name} do
+  run "cd #{mount_point} && tar -xvzf data.tgz"
+end
+before 'unpack_data', 'EC2:start'
+
+
+
+
+#and once that's done
+
+# cap EBS:snapshot
+# cap EBS:unmount
+# cap EBS:detach
+# cap EBS:delete
+# cap EC2:stop
