@@ -89,7 +89,7 @@ before "fetch_genome","EC2:start"
 
 # convert the export.txt file to fastq for alignment
 task make_fastq, :roles => group_name do 
-
+  run "curl "
 end
 before 'make_fastq', 'EC2:start' 
 
