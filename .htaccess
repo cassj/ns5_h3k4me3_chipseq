@@ -1,0 +1,7 @@
+Order allow,deny
+Allow from all
+AuthName "NS5 H3k43me"
+AuthType Basic
+AuthUserFile /etc/htpasswd/.htpasswd
+require user buckleylab
+Options Indexes
